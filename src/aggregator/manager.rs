@@ -11,6 +11,8 @@ use time;
 
 use crate::notifier::generic::Notification;
 use crate::prober::manager::STORE as PROBER_STORE;
+use crate::database::manager::insert_in_db as run_datastoring;
+use crate::database::manager::init_db as INIT_DB;
 use crate::prober::mode::Mode;
 use crate::prober::status::Status;
 use crate::APP_CONF;
@@ -94,7 +96,11 @@ fn scan_and_bump_states() -> Option<BumpedStates> {
                                         "replica: {}:{}:{} is dead because it didnt report in a while",
                                         probe_id, node_id, replica_id
                                     );
-
+                                    let my_rep_status = replica_status;
+                                    debug!("This is my replica previous status: {:?}", my_rep_status);
+                                    let state = 2;
+                                    let store_data = run_datastoring(probe_id.to_string(), node_id.to_string(),state);
+                                    debug!("Store_data result (in aggregator) {:?}", store_data);
                                     replica_status = Status::Dead;
                                 }
                             }
@@ -111,7 +117,9 @@ fn scan_and_bump_states() -> Option<BumpedStates> {
                                         "replica: {}:{}:{} is sick because it is overloaded",
                                         probe_id, node_id, replica_id
                                     );
-
+                                    let state = 1;
+                                    let store_data = run_datastoring(probe_id.to_string(), node_id.to_string(),state);
+                                    debug!("Store_data result (in aggregator) {:?}", store_data);
                                     replica_status = Status::Sick;
                                 }
                             }
@@ -146,7 +154,9 @@ fn scan_and_bump_states() -> Option<BumpedStates> {
                                         "replica: {}:{}:{} is dead because it didnt report in a while",
                                         probe_id, node_id, replica_id
                                     );
-
+                                    let state = 2;
+                                    let store_data = run_datastoring(probe_id.to_string(), node_id.to_string(),state);
+                                    debug!("Store_data result (in aggregator) {:?}", store_data);
                                     replica_status = Status::Dead;
                                 }
                             }
@@ -322,6 +332,8 @@ fn notify(bumped_states: &BumpedStates) {
 pub fn run() {
     // Notify that systems are healthy (when booting up aggregator)
     dispatch_startup_notification();
+    let create_tables = INIT_DB();
+    info!("Database init response {:?}", create_tables);
 
     // Start aggregate loop
     loop {

@@ -12,6 +12,7 @@ use std::thread;
 use std::time::{Duration, SystemTime};
 use time;
 
+
 use indexmap::IndexMap;
 use ping::ping;
 use reqwest::blocking::Client;
@@ -19,11 +20,17 @@ use reqwest::header::{HeaderMap, USER_AGENT};
 use reqwest::redirect::Policy as RedirectPolicy;
 use reqwest::StatusCode;
 use run_script::{self, ScriptOptions};
+use crate::database::manager::insert_in_db as run_datastoring;
+use crate::database::manager::get_days as days_range;
+use crate::database::manager::get_outages;
+// use postgres::{Client as pg_client, NoTls, Error};
+
 
 use super::replica::ReplicaURL;
 use super::states::{
     ServiceStates, ServiceStatesProbe, ServiceStatesProbeNode, ServiceStatesProbeNodeReplica,
-    ServiceStatesProbeNodeReplicaMetrics, ServiceStatesProbeNodeReplicaMetricsRabbitMQ,
+    ServiceStatesProbeNodeReplicaMetrics, ServiceStatesProbeNodeReplicaMetricsRabbitMQ, 
+    HistoryDaysOutages,
 };
 use super::status::Status;
 use crate::config::config::ConfigPluginsRabbitMQ;
@@ -442,7 +449,6 @@ fn proceed_replica_probe_script(script: &String) -> (Status, Option<Duration>) {
         }
         Err(err) => {
             error!("prober script execution failed with error: {}", err);
-
             Status::Dead
         }
     };
@@ -560,8 +566,24 @@ fn dispatch_replica<'a>(mode: DispatchMode<'a>, probe_id: &str, node_id: &str, r
         if let Some(ref mut probe) = store.states.probes.get_mut(probe_id) {
             if let Some(ref mut node) = probe.nodes.get_mut(node_id) {
                 if let Some(ref mut replica) = node.replicas.get_mut(replica_id) {
+                    debug!("Replica status before the check {:?}",replica.status);
+                    if replica.status != replica_status {
+                        if replica_status != Status::Healthy {
+                            let state = match replica_status {
+                                Status::Sick => 1,
+                                Status::Dead => 2,
+                                Status::Healthy => 0,
+                            };
+                            debug!("Storing data hihi");
+                            let store_data = run_datastoring(probe_id.to_string(), node_id.to_string(),state);
+                            debug!("Store_data result {:?}", store_data);
+                        }
+                    }
+                    // let state = 1;
+                    // let store_data = run_datastoring(probe_id.to_string(), node_id.to_string(),state);
+                    // debug!("Store_data result {:?}", store_data);
                     replica.status = replica_status;
-
+                    debug!("Replica status after the check {:?}",replica.status);
                     replica.metrics.latency =
                         replica_latency.map(|duration| duration.as_millis() as u64);
                 }
@@ -667,10 +689,32 @@ pub fn run_dispatch_plugins(probe_id: &str, node_id: &str, queue: Option<String>
         }
     }
 }
+// pub fn refresh_historic() {
+    
+//     let mut store = PROBER_STORE.write().unwrap();
 
+//     let (a,b) = days_range();
+
+//     for (probe_id, probe) in store.states.probes.iter_mut() {
+//         debug!("aggregate probe: {}", probe_id);
+
+//         for (node_id, node) in probe.nodes.iter_mut() {
+//             debug!("aggregate node: {}:{}", probe_id, node_id);
+
+//             for (_, days) in node.days.iter_mut() {
+//                 if one day after last call 
+
+//             }
+//         }
+//     }
+
+// }
+
+// }
 pub fn initialize_store() {
     // Copy monitored hosts in store (refactor the data structure)
     let mut store = STORE.write().unwrap();
+    let (a,b) = days_range();
 
     for service in &APP_CONF.probe.service {
         let mut probe = ServiceStatesProbe {
@@ -683,16 +727,25 @@ pub fn initialize_store() {
 
         for node in &service.node {
             debug!("prober store: got node {}:{}", service.id, node.id);
-
             let mut probe_node = ServiceStatesProbeNode {
                 status: Status::Healthy,
                 label: node.label.to_owned(),
+                days: IndexMap::new(),
                 mode: node.mode.to_owned(),
                 replicas: IndexMap::new(),
                 http_body_healthy_match: node.http_body_healthy_match.to_owned(),
                 rabbitmq_queue: node.rabbitmq_queue.to_owned(),
             };
-
+            for n in a..=b {  
+                let n_id = &node.id;
+                let mut empty: bool = true;
+                let mut my_status = Status::Healthy; 
+                // let mut noticedates: Vec<&str> = vec!["Dates:"];
+                let _rows = get_outages(n.to_string(), n_id.to_string(), &mut empty, &mut probe_node, n );
+                for (_, aho) in probe_node.days.iter() {
+                    debug!("HistoryDaysOutages: {:?}  ", aho.status);
+                }
+            }   
             // Node with replicas? (might be a poll node)
             if let Some(ref replicas) = node.replicas {
                 if node.mode != Mode::Poll {

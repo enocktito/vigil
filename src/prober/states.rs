@@ -31,10 +31,19 @@ pub struct ServiceStatesProbe {
 pub struct ServiceStatesProbeNode {
     pub status: Status,
     pub label: String,
+    pub days: IndexMap<String, HistoryDaysOutages>,
     pub mode: Mode,
     pub replicas: IndexMap<String, ServiceStatesProbeNodeReplica>,
     pub http_body_healthy_match: Option<Regex>,
     pub rabbitmq_queue: Option<String>,
+}
+
+#[derive(Serialize)]
+#[derive(Debug)]
+pub struct HistoryDaysOutages {
+    pub status: Status,
+    pub daynum: u32,
+    pub noticedate: Vec<String>,
 }
 
 #[derive(Serialize)]
