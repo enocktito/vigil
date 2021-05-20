@@ -1,4 +1,5 @@
 use postgres::{Client, NoTls, Error};
+// use std::convert::TryInto;
 // use postgres:::row::Row;
 // use chrono::format::ParseError;
 use chrono::{Local, DateTime, Datelike};
@@ -61,7 +62,7 @@ pub fn insert_in_db(
     info!("datastoring in postgres");
     
     let local: DateTime<Local> = Local::now();
-    let my_time = local.to_string();
+    let my_time = local.format("%Y-%m-%d %H:%M:%S").to_string();
     let dy = Datelike::ordinal(&local).to_string();
     info!("Day of year: {}", dy);
     // .format("%Y-%m-%d %H:%M:%S");
@@ -87,19 +88,35 @@ pub fn insert_in_db(
     Ok(())
 
 }
-pub fn get_days() -> (u32, u32) {
+pub fn get_days() -> (u32, u32, bool, bool) {
     let local: DateTime<Local> = Local::now();
     let b = Datelike::ordinal(&local);
-    let a = b - 89;
-    return (a, b);
+    let mut bix:bool = false;
+    let mut spread:bool = false;
+    let range = 142;
+    let mut a:u32;
+    if b < range {
+        spread = true;
+        let y = local.format("%Y").to_string();
+        let mut i = match y.parse::<i32>() {
+            Ok(i) => i,
+            Err(_e) => -1,
+        };
+        i -= 1;
+        if ((i % 4 == 0 && i % 100 != 0) || i % 400 == 0){
+            bix = true;
+            a = 366 - (range - b);
+        } else {
+            bix = false;
+            a = 365 - (range - b);
+        }
+    } else {
+        spread = false;
+        a = b - range;
+    }
+    info!("MY A:{} and ß:{}, spread:{} bix:{} ", a, b, spread, bix);
+    return (a, b, bix, spread);
 }
-// pub fn get_outages(dayofyear: String, node_id: String) -> (Vec<String>, Status) {
-//     let mut outage: Vec<String> = Vec::new();
-//     let mut status: Status;
-//     let rs = outages(dayofyear, node_id, &mut outage, &mut status);
-//     println!("Outages results: {:?}", rs);
-//     return (outage, status);
-// }
 
 pub fn get_outages(dayofyear: String, node_id: String, find: &mut bool, probe_node: &mut ServiceStatesProbeNode, n: u32) -> Result<(), Error> {
     let mut client = Client::connect("postgresql://postgres:example@localhost:5432/postgres", NoTls)?;
@@ -118,24 +135,30 @@ pub fn get_outages(dayofyear: String, node_id: String, find: &mut bool, probe_no
         let mut code = 1;
         for row in my_rows {
             let my_s:i32 = row.get(1);
-            let my_not = row.get(0);
+            let my_not:String = row.get(0);
             if my_s == 2 {
                 code = my_s;
             }
-            outages.push(my_not);
+            let incident = match code {
+                0 => "Healthy",
+                1 => "Sick",
+                _ => "Dead",
+            };
+            let notice = format!("{} at {}", incident, my_not);
+            info!("Get notice: {:?}", notice);
+            outages.push(notice);
         }
         my_status = match code {
             0 => Status::Healthy,
             1 => Status::Sick,
             _ => Status::Dead,          
         };
+        info!("Outage found");
         
     } else {
         my_status = Status::Healthy;   
+        info!("No outage found");
     }
-    // noticedates = &mut outages;
-    // let mut status = Status::Healthy;
-    // return (outages, status);
     probe_node.days.insert(
             n.to_string(),
             HistoryDaysOutages {
