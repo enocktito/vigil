@@ -1,0 +1,25 @@
+version: '3'
+services:
+  backend:
+    image: rustlang/rust:nightly-buster
+    container_name: backend
+    command: tail -f /dev/null
+    ports:
+      - 8082:8080
+    volumes:
+      - /Users/opensi/Documents/vigil:/home/v2
+      - /Users/opensi/learn/rust/docker/vigil:/home/v1
+  db:
+    image: postgres:12
+    container_name: postgres
+    restart: always
+    command: ["postgres", "-c", "log_statement=all"]
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_PASSWORD: example
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+      - 8081:8080
