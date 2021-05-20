@@ -44,6 +44,11 @@ run_script = "0.6"
 lettre = { version = "0.9", features = ["smtp-transport"], optional = true }
 lettre_email = { version = "0.9", optional = true }
 libstrophe = { version = "0.13", default-features = false, optional = true }
+postgres = { version = "0.19.1", features = ["with-chrono-0_4"] }
+chrono = "0.4.19"
+dotenv = "0.15.0"
+tokio = "1.5.0"
+tokio-postgres = "0.7.2"
 
 [features]
 default = ["notifier-email", "notifier-twilio", "notifier-slack", "notifier-telegram", "notifier-pushover", "notifier-webhook", "notifier-mailgun"]

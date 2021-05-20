@@ -44,6 +44,7 @@ mod config;
 mod notifier;
 mod prober;
 mod responder;
+mod database;
 
 use std::ops::Deref;
 use std::str::FromStr;
@@ -181,6 +182,7 @@ fn main() {
 
     // Initialize prober store
     initialize_store_prober();
+    // thread::spawn(spawn_prober_refresh)
 
     // Spawn probes (background thread)
     thread::spawn(spawn_poll_prober);

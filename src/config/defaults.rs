@@ -12,7 +12,7 @@ pub fn server_log_level() -> String {
 }
 
 pub fn server_inet() -> SocketAddr {
-    "[::1]:8080".parse().unwrap()
+    "[::1]:8089".parse().unwrap()
 }
 
 pub fn server_workers() -> u16 {

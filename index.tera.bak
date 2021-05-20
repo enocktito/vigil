@@ -117,15 +117,11 @@
           <div class="title">
             <div class="badge badge-default badge-status-{{ probe.status | escape }}"></div>
 
-            <h3 class="font-sans-bold">{{ probe.label | escape }} </h3>
+            <h3 class="font-sans-bold">{{ probe.label | escape }}</h3>
           </div>
 
           <ul>
             {% for _, node in probe.nodes %}
-          
-          
-
-
               <li class="status-{{ node.status | escape }}-background-before">
                 <label class="font-sans-semibold status-{{ node.status | escape }}-background-subtle status-{{ node.status | escape }}-border-subtle">{{ node.label | escape }}</label>
 
@@ -192,34 +188,7 @@
                         </span>
                       </span>
                     </span>
-
-                    
                   {% endfor %}
-                </div>
-
-                <div class="node">
-
-                  {% for _, day in node.days %}
-                    <span class="replica status-{{ day.status | escape }}-background has-tooltip font-sans-semibold">
-                      {{ loop.index }}
-                      <span class="tooltip">
-                        <span class="tooltip-value">
-                          <span class="tooltip-value-text">
-                            <span class="tooltip-main font-sans-semibold">
-                              {% if day.status == "dead" %}
-                                This day reports as dead.
-                              {% elif day.status == "sick" %}
-                                This day reports as sick.
-                              {% else %}
-                                This day reports as healthy.
-                              {% endif %}
-                            </span>
-                          </span>
-                        </span>
-                      </span>
-                    </span>
-                  {% endfor %}
-
                 </div>
               </li>
             {% endfor %}
