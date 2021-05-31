@@ -207,7 +207,7 @@
                           <span class="tooltip-value-text">
                             <span class="tooltip-main font-sans-semibold">
                               {% if day.status == "dead" %}
-                                This day reports as dead.
+                                This day app dead.
                               {% elif day.status == "sick" %}
                                 This day reports as sick.
                               {% else %}
@@ -222,6 +222,7 @@
 
                 </div>
               </li>
+              
             {% endfor %}
           </ul>
         </section>
