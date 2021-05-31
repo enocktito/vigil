@@ -23,14 +23,12 @@ use run_script::{self, ScriptOptions};
 use crate::database::manager::insert_in_db as run_datastoring;
 use crate::database::manager::get_days as days_range;
 use crate::database::manager::get_outages;
-// use postgres::{Client as pg_client, NoTls, Error};
 
 
 use super::replica::ReplicaURL;
 use super::states::{
     ServiceStates, ServiceStatesProbe, ServiceStatesProbeNode, ServiceStatesProbeNodeReplica,
-    ServiceStatesProbeNodeReplicaMetrics, ServiceStatesProbeNodeReplicaMetricsRabbitMQ, 
-    HistoryDaysOutages,
+    ServiceStatesProbeNodeReplicaMetrics, ServiceStatesProbeNodeReplicaMetricsRabbitMQ,
 };
 use super::status::Status;
 use crate::config::config::ConfigPluginsRabbitMQ;
@@ -714,7 +712,7 @@ pub fn run_dispatch_plugins(probe_id: &str, node_id: &str, queue: Option<String>
 pub fn initialize_store() {
     // Copy monitored hosts in store (refactor the data structure)
     let mut store = STORE.write().unwrap();
-    let (a,b) = days_range();
+    let (a, b, bix, spread) = days_range();
 
     for service in &APP_CONF.probe.service {
         let mut probe = ServiceStatesProbe {
@@ -736,16 +734,51 @@ pub fn initialize_store() {
                 http_body_healthy_match: node.http_body_healthy_match.to_owned(),
                 rabbitmq_queue: node.rabbitmq_queue.to_owned(),
             };
-            for n in a..=b {  
-                let n_id = &node.id;
-                let mut empty: bool = true;
-                let mut my_status = Status::Healthy; 
-                // let mut noticedates: Vec<&str> = vec!["Dates:"];
-                let _rows = get_outages(n.to_string(), n_id.to_string(), &mut empty, &mut probe_node, n );
-                for (_, aho) in probe_node.days.iter() {
-                    debug!("HistoryDaysOutages: {:?}  ", aho.status);
+            if spread{
+                let endyear = match bix {
+                    true => 366,
+                    false => 365,
+                };
+                debug!("Year spreaded");
+                for n in a..=endyear {
+                    debug!("Days in the range: {}", n);
+                    let n_id = &node.id;
+                    let mut empty: bool = true;
+                    let mut my_status = Status::Healthy; 
+                    // let mut noticedates: Vec<&str> = vec!["Dates:"];
+                    let _rows = get_outages(n.to_string(), n_id.to_string(), &mut empty, &mut probe_node, n );
+                    for (_, aho) in probe_node.days.iter() {
+                        debug!("HistoryDaysOutages: {:?}  ", aho.status);
+                        debug!("Notices:{:?}", aho.noticedate);
+                    }
+                }   
+                for mut n in 1..=b {  
+                    debug!("Days in the range: {}", n);
+                    let n_id = &node.id;
+                    let mut empty: bool = true;
+                    let mut my_status = Status::Healthy; 
+                    // let mut noticedates: Vec<&str> = vec!["Dates:"];
+                    let _rows = get_outages(n.to_string(), n_id.to_string(), &mut empty, &mut probe_node, n );
+                    for (_, aho) in probe_node.days.iter() {
+                        debug!("HistoryDaysOutages: {:?}  ", aho.status);
+                        debug!("Notices:{:?}", aho.noticedate);
+                    }
+                }   
+            } else {
+                for n in a..=b {  
+                    debug!("Days in the range: {}", n);
+                    let n_id = &node.id;
+                    let mut empty: bool = true;
+                    let mut my_status = Status::Healthy; 
+                    // let mut noticedates: Vec<&str> = vec!["Dates:"];
+                    let _rows = get_outages(n.to_string(), n_id.to_string(), &mut empty, &mut probe_node, n );
+                    for (_, aho) in probe_node.days.iter() {
+                        debug!("HistoryDaysOutages: {:?}  ", aho.status);
+                        debug!("Notices:{:?}", aho.noticedate);
+                    }
                 }
-            }   
+            }
+               
             // Node with replicas? (might be a poll node)
             if let Some(ref replicas) = node.replicas {
                 if node.mode != Mode::Poll {
