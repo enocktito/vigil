@@ -197,10 +197,10 @@
                   {% endfor %}
                 </div>
 
-                <div class="node">
+                <div class="barre-contactainer">
 
                   {% for _, day in node.days %}
-                    <span class="replica status-{{ day.status | escape }}-background has-tooltip font-sans-semibold">
+                    <span class="replica status-{{ day.status | escape }}-background has-tooltip barre font-sans-semibold">
                       {{ loop.index }}
                       <span class="tooltip">
                         <span class="tooltip-value">
@@ -213,6 +213,14 @@
                               {% else %}
                                 This day reports as healthy.
                               {% endif %}
+                            </span>
+
+                            <span class="tooltip-main font-sans-semibold">
+                            {{day.daynum }}
+                            </span>
+
+                            <span class="tooltip-main font-sans-semibold">
+                            {{day.noticedate | escape}}
                             </span>
                           </span>
                         </span>
